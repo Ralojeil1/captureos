@@ -1,0 +1,29 @@
+user:
+  name: "Your Name"
+
+timezone: "UTC"
+
+vault:
+  path: "~/Documents/CaptureVault"
+  wiki_dir: "wiki"
+
+calendar:
+  enabled: false
+  provider: "none"
+  calendar_name: "Personal"
+  default_reminders_minutes: [1440, 60]
+
+durations_minutes:
+  meeting_call: 60
+  ordinary_event_appointment: 60
+  large_event_when_obvious: 120
+  timed_task_reminder: 60
+
+baskets:
+  task_reminder: "capture-tasks-reminders.md"
+  event_meeting: "capture-events-meetings.md"
+  idea_note: "capture-ideas-notes.md"
+
+commands:
+  capture: "/capture"
+  normal: "/normal"
