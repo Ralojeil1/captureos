@@ -211,7 +211,16 @@ The setup wizard walks you through 3 auth options:
 | Service Account | Never | Servers, Raspberry Pi, headless |
 | Custom OAuth Client | Once | Your own GCP project |
 
-**No scary "unverified app" warnings** — the wizard uses Google's official SDK client or your own project credentials.
+**No scary "unverified app" warnings** — the wizard explains exactly what to expect:
+
+```
+╔══════════════════════════════════════════╗
+║  ⚠ Google hasn't verified this app     ║
+║  [Advanced]                  [Back]      ║
+╚══════════════════════════════════════════╝
+```
+
+This is **normal** for developer tools (gcloud, rclone, Thunderbird all show it). Google charges $15K-$75K for verification — open-source tools use the "Advanced → Continue" workaround, or users can use a service account / custom OAuth client to avoid it entirely.
 
 ### Hermes Agent skill pack
 
