@@ -205,27 +205,44 @@ captureos "Meeting Monday 10am" --gcal --check-conflicts
 
 The setup wizard walks you through 3 auth options:
 
-| Method | Browser needed? | Best for |
-|--------|----------------|----------|
-| Google OAuth (default) | Once | Personal use, any device |
-| Service Account | Never | Servers, Raspberry Pi, headless |
-| Custom OAuth Client | Once | Your own GCP project |
+| Method | Browser needed? | Warning? | Best for |
+|--------|----------------|----------|----------|
+| Google OAuth (default) | Once | Shows "unverified app" (expected) | Personal use, any device |
+| Service Account | Never | None | Servers, Raspberry Pi, headless |
+| Custom OAuth Client | Once | None (it's your own app) | Your own GCP project |
 
-**No scary "unverified app" warnings** — the wizard explains exactly what to expect:
+**About the "unverified app" warning (Google OAuth method):**
+
+After signing in, Google will show:
 
 ```
 ╔══════════════════════════════════════════╗
 ║  ⚠ Google hasn't verified this app     ║
+║                                          ║
+║  This app is requesting access to your   ║
+║  Google Calendar. Google hasn't reviewed ║
+║  this app yet.                           ║
+║                                          ║
 ║  [Advanced]                  [Back]      ║
 ╚══════════════════════════════════════════╝
 ```
 
-This is **normal** for developer tools (gcloud, rclone, Thunderbird all show it). Google charges $15K-$75K for verification — open-source tools use the "Advanced → Continue" workaround, or users can use a service account / custom OAuth client to avoid it entirely.
+This is **completely normal** and happens for hundreds of legitimate developer tools (gcloud CLI, rclone, Thunderbird, etc.). Here's why:
+
+- **Google charges $15,000-$75,000 for "app verification"** — open-source tools can't afford this
+- The warning means Google hasn't *reviewed* the app, NOT that it's dangerous
+- You're logging into **your own Google account** with **Google's official SDK client** — there is zero risk
+
+**What to do:** Click **"Advanced"** (bottom-left corner) → Click **"Go to Google Auth Library (unsafe)"** → Approve Calendar access → Done. The token is saved and works forever.
+
+**To avoid the warning entirely:** Use a **Service Account** (no browser, no warning) or create your own **Custom OAuth Client** in the Google Cloud Console (no warning because it's your own app).
+
+The wizard explains all of this interactively — just run `captureos-gcal-setup`.
 
 ### Hermes Agent skill pack
 
 ```bash
-git clone https://github.com/OWNER/captureos.git
+git clone https://github.com/Ralojeil1/captureos.git
 cd captureos
 ./scripts/install.sh --vault ~/Documents/CaptureVault
 ```
