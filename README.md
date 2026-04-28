@@ -34,16 +34,18 @@ Everything else is an internal subtype, not another basket the user has to manag
 
 ## What it includes
 
-- **Python package** (`pip install captureos`) — deterministic classifier, multi-item parser, conflict detector
+- **Python package** (`pip install captureos`) — deterministic 9-rule classifier, multi-item parser, conflict detector
 - **Standalone CLI** (`captureos "Dentist tomorrow 3pm"`) — no Hermes required
+- **Structured JSON output** — use `--json` for machine-readable results or LLM function calling
+- **Telegram bot** (`captureos --telegram`) — polling-based bot with /capture, /normal, /status, /inbox
+- **Google Calendar integration** (`captureos "..." --gcal`) — write events, check conflicts, 3 auth strategies
+- **Markdown inbox writer** — classifies → writes → reads back markdown files
+- **Conflict detection** — overlap checking + free-slot search before creating events
+- **Persistent capture mode** — survives session restarts via `~/.captureos/state.json`
+- **Date/time parser** — 25+ formats: named dates, slash dates, relative offsets, noon/midnight, day-of-week
 - **Hermes Agent skills** for `/capture`, `/normal`, and the core `captureos` routing rules
-- **Structured JSON output** — use `--json` for machine-readable results or function calling
-- **Markdown inbox templates** for the three baskets with file writer
-- **Conflict detection** — checks for calendar overlaps before creating events
-- **Persistent capture mode** — survives session restarts via state file
-- **Comprehensive test suite** — 149+ tests covering classification, parsing, writing, and integration
+- **Comprehensive test suite** — 149+ pytest tests covering all modules
 - **Validation and secret-scan scripts** for public-release readiness
-- **Custom commands template** and polished setup guide
 
 ## Core commands
 
@@ -160,11 +162,43 @@ Ask first before:
 ### Python package (standalone)
 
 ```bash
-pip install captureos
+pip install captureos                  # core package
+pip install captureos[all]             # with Telegram + Google Calendar
 captureos "Dentist tomorrow 3pm"
 captureos --json "Meeting Monday 10am"
 captureos --multi "Call Alex Friday. Idea: build a dashboard."
 captureos --write "Idea: build a weekly report" --vault ~/Documents/Vault
+captureos "Dentist tomorrow 3pm" --gcal           # Google Calendar (needs auth)
+captureos --telegram                              # Start Telegram bot
+```
+
+### Telegram bot
+
+```bash
+export TELEGRAM_BOT_TOKEN="your_token_from_BotFather"
+captureos --telegram
+```
+
+Bot commands in Telegram:
+- `/capture` — all messages classified as captures
+- `/normal` — back to normal chat
+- `/status` — current mode
+- `/inbox` — recent captures
+- `/help` — usage
+
+### Google Calendar
+
+```bash
+# Auth setup (pick one):
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/cloud-platform
+
+# Or use a service account:
+export GOOGLE_SERVICE_ACCOUNT_PATH=/path/to/key.json
+
+# Create events:
+captureos "Dentist tomorrow 3pm" --gcal
+captureos "Meeting Monday 10am" --gcal --check-conflicts
 ```
 
 ### Hermes Agent skill pack
@@ -198,6 +232,8 @@ CaptureOS/
 │   ├── writer.py             # Markdown inbox file I/O
 │   ├── state.py              # Persistent capture mode state
 │   ├── conflict.py           # Calendar conflict detection
+│   ├── telegram_bot.py       # Telegram polling bot
+│   ├── gcal_writer.py        # Google Calendar event writer
 │   └── cli.py                # Standalone CLI entry point
 ├── tests/                    # 149+ pytest tests
 ├── skills/                   # Hermes skills
@@ -225,9 +261,45 @@ Maintainers can run the included checks with:
 ./scripts/secret-scan.sh
 ```
 
+## Classification rules
+
+The deterministic classifier uses a 9-rule priority system:
+
+1. **Explicit prefix** — `Task:`, `Meeting:`, `Idea:`, etc. set the basket directly
+2. **Date + time + meeting keyword** → Event / Meeting
+3. **Date + time + task keyword** → Task / Reminder
+4. **Time only + meeting keyword** → Event / Meeting (e.g., "Conference call 2pm")
+5. **Date only + event keyword** → Event / Meeting (all-day)
+6. **Date only + task keyword** → Task / Reminder (all-day)
+7. **Date only, no keyword** → Task / Reminder (all-day, safest for dated items)
+8. **Recurring pattern** ("every Monday") → Idea / Note
+9. **No clear signal** → Idea / Note (safest default)
+
+For programmatic use, import the classifier:
+
+```python
+from captureos import classify
+result = classify("Dentist tomorrow 3pm")
+for item in result.items:
+    print(f"{item.basket_label}: {item.title} — {item.date} {item.time}")
+```
+
+## API
+
+```python
+from captureos import classify, classify_multi
+from captureos.classifier import classify_single, CaptureItem, Basket, CLASSIFY_FUNCTION_SCHEMA
+from captureos.router import CaptureRouter, RouterConfig
+from captureos.writer import write_to_inbox, read_inbox
+from captureos.state import is_capture_mode, set_capture_mode
+from captureos.conflict import ConflictDetector, CalendarEvent
+from captureos.gcal_writer import GCalWriter
+from captureos.telegram_bot import TelegramCaptureBot
+```
+
 ## Status
 
-Public-ready alpha. The core model is intentionally small and stable; integrations can be added around it.
+v0.3.0 — Production-ready classification with optional Telegram + Google Calendar integrations. The core engine is deterministic and tested; cloud integrations require user-provided credentials.
 
 ## License
 
