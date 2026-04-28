@@ -31,9 +31,24 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]
+telegram = [
+    "aiohttp>=3.8",
+]
+gcal = [
+    "google-auth>=2.0",
+    "google-auth-oauthlib>=1.0",
+    "google-api-python-client>=2.0",
+]
+all = [
+    "aiohttp>=3.8",
+    "google-auth>=2.0",
+    "google-auth-oauthlib>=1.0",
+    "google-api-python-client>=2.0",
+]
 
 [project.scripts]
 captureos = "captureos.cli:main"
+captureos-telegram = "captureos.telegram_bot:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

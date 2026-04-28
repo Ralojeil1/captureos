@@ -304,6 +304,8 @@ Examples:
   captureos --json "Meeting with Sarah Monday 10am"
   captureos --inbox tasks   # Read tasks inbox
   captureos --write "Idea: build a weekly report" --vault ~/Documents/Vault
+  captureos "Dentist tomorrow 3pm" --gcal              # Write to Google Calendar
+  captureos --telegram                                 # Start Telegram bot
         """,
     )
 
@@ -351,8 +353,45 @@ Examples:
         "--version", action="store_true",
         help="Show version"
     )
+    # Google Calendar
+    parser.add_argument(
+        "--gcal", action="store_true",
+        help="Write classified events to Google Calendar (requires auth)"
+    )
+    parser.add_argument(
+        "--calendar-id", type=str,
+        help="Google Calendar ID (default: primary)"
+    )
+    parser.add_argument(
+        "--check-conflicts", action="store_true",
+        help="Check for calendar conflicts before creating events"
+    )
+    # Telegram
+    parser.add_argument(
+        "--telegram", action="store_true",
+        help="Start Telegram bot (requires TELEGRAM_BOT_TOKEN env var)"
+    )
+    parser.add_argument(
+        "--tg-token", type=str,
+        help="Telegram bot token (or set TELEGRAM_BOT_TOKEN env var)"
+    )
 
     args = parser.parse_args()
+
+    # Telegram mode
+    if args.telegram:
+        try:
+            from captureos.telegram_bot import run_telegram_bot
+            token = args.tg_token or None
+            run_telegram_bot(token)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ImportError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            print("Install: pip install captureos[telegram]", file=sys.stderr)
+            sys.exit(1)
+        return
 
     # Version
     if args.version:
@@ -418,6 +457,38 @@ Examples:
 
     # Output
     print(_format_output(result, args.json))
+
+    # Optional: write to Google Calendar
+    if args.gcal:
+        try:
+            from captureos.gcal_writer import GCalWriter
+            writer = GCalWriter(calendar_id=args.calendar_id or None)
+
+            for item in result.items:
+                if item.basket != Basket.IDEA_NOTE and item.date:
+                    # Check conflicts if requested
+                    if args.check_conflicts and item.time:
+                        conflicts = writer.check_conflicts(
+                            item.date, item.time, item.duration_minutes
+                        )
+                        if conflicts:
+                            print(f"  ⚠ Conflicts for '{item.title}':")
+                            for c in conflicts:
+                                print(f"    - {c['summary']} ({c['start'].get('dateTime', c['start'].get('date'))})")
+                            continue  # skip conflicting events
+
+                    event_result = writer.write_event(item)
+                    if event_result.get("created"):
+                        print(f"  ✓ Calendar: {item.title} → {event_result.get('html_link', '')}")
+                    elif event_result.get("skipped"):
+                        print(f"  ⊘ {event_result['reason']}: {item.title}")
+                    else:
+                        print(f"  ✗ Failed: {event_result.get('error', 'unknown')}")
+        except ImportError as e:
+            print(f"Error: Google Calendar support requires additional packages: {e}", file=sys.stderr)
+            print("Install: pip install google-auth google-auth-oauthlib google-api-python-client", file=sys.stderr)
+        except Exception as e:
+            print(f"Google Calendar error: {e}", file=sys.stderr)
 
     # Optional: write to inbox
     if args.write:
