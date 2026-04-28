@@ -189,17 +189,29 @@ Bot commands in Telegram:
 ### Google Calendar
 
 ```bash
-# Auth setup (pick one):
-gcloud auth application-default login \
-  --scopes=https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/cloud-platform
+# One-command setup wizard (recommended):
+captureos-gcal-setup
 
-# Or use a service account:
-export GOOGLE_SERVICE_ACCOUNT_PATH=/path/to/key.json
+# Or quick setup with service account:
+captureos-gcal-setup --service-account --project YOUR_PROJECT_ID
 
-# Create events:
+# Or with existing OAuth client secret:
+captureos-gcal-setup --client-secret ~/Downloads/client_secret.json
+
+# Then create events:
 captureos "Dentist tomorrow 3pm" --gcal
 captureos "Meeting Monday 10am" --gcal --check-conflicts
 ```
+
+The setup wizard walks you through 3 auth options:
+
+| Method | Browser needed? | Best for |
+|--------|----------------|----------|
+| Google OAuth (default) | Once | Personal use, any device |
+| Service Account | Never | Servers, Raspberry Pi, headless |
+| Custom OAuth Client | Once | Your own GCP project |
+
+**No scary "unverified app" warnings** — the wizard uses Google's official SDK client or your own project credentials.
 
 ### Hermes Agent skill pack
 

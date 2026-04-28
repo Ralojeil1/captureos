@@ -49,6 +49,7 @@ all = [
 [project.scripts]
 captureos = "captureos.cli:main"
 captureos-telegram = "captureos.telegram_bot:main"
+captureos-gcal-setup = "captureos.gcal_setup:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

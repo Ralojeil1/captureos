@@ -64,11 +64,28 @@ def _get_calendar_id() -> str:
 def _get_credentials() -> Credentials:
     """Get Google Calendar credentials using multiple auth strategies.
 
-    Priority:
-    1. Service account (GOOGLE_SERVICE_ACCOUNT_PATH)
-    2. ADC (gcloud auth application-default login)
-    3. OAuth client (GOOGLE_CLIENT_SECRET_PATH)
+    Priority (no scary warnings):
+    1. User's own OAuth token   (~/.captureos/gcal_token.pickle)
+    2. Service account           (GOOGLE_SERVICE_ACCOUNT_PATH)
+    3. Custom OAuth client       (GOOGLE_CLIENT_SECRET_PATH)
+    4. gcloud ADC               (fallback, may show 'unverified app' warning)
     """
+    # ── Strategy 0: Existing saved OAuth token (from gcal-setup wizard) ──
+    if os.path.exists(TOKEN_PATH):
+        try:
+            with open(TOKEN_PATH, "rb") as token:
+                creds = pickle.load(token)
+            if creds and creds.valid:
+                return creds
+            if creds and creds.expired and creds.refresh_token:
+                from google.auth.transport.requests import Request
+                creds.refresh(Request())
+                with open(TOKEN_PATH, "wb") as token:
+                    pickle.dump(creds, token)
+                return creds
+        except Exception:
+            pass  # fall through to other methods
+
     # ── Strategy 1: Service Account ──
     sa_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_PATH", "")
     if sa_path and os.path.exists(os.path.expanduser(sa_path)):
@@ -123,11 +140,14 @@ def _get_credentials() -> Credentials:
 
             if not os.path.exists(client_secret_path):
                 raise FileNotFoundError(
-                    "No Google credentials found.\n"
-                    "Options:\n"
+                    "No Google credentials found.\n\n"
+                    "Run the setup wizard:\n"
+                    "  captureos-gcal-setup\n\n"
+                    "Or set up manually:\n"
                     "  1. Service account: GOOGLE_SERVICE_ACCOUNT_PATH=/path/to/key.json\n"
-                    "  2. ADC: gcloud auth application-default login\n"
-                    "  3. OAuth: GOOGLE_CLIENT_SECRET_PATH=/path/to/client_secret.json\n"
+                    "  2. OAuth client:    GOOGLE_CLIENT_SECRET_PATH=/path/to/client_secret.json\n"
+                    "  3. gcloud ADC:      gcloud auth application-default login \\\n"
+                    "       --scopes=https://www.googleapis.com/auth/calendar.events\n"
                     f"Put client_secret.json at: {client_secret_path}"
                 )
 
